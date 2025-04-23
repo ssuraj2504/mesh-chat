@@ -11,10 +11,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.meshchat.databinding.ActivityMainBinding
+import com.example.meshchat.model.Message
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
+
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -42,6 +45,10 @@ class MainActivity : AppCompatActivity() {
                 binding.etMessage.text.clear()
             }
         }
+    }
+
+    private fun Message(id: String, text: String): Message {
+        TODO("Not yet implemented")
     }
 
     private fun checkPermissions() {
