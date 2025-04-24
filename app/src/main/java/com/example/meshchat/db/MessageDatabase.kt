@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.meshchat.model.MessageEntity
 
 @Database(entities = [MessageEntity::class], version = 1)
 abstract class MessageDatabase : RoomDatabase() {

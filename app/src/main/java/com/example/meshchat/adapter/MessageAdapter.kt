@@ -1,4 +1,4 @@
-package com.example.meshchat
+package com.example.meshchat.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

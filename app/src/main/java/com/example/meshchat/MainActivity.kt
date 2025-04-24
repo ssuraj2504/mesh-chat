@@ -10,14 +10,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.meshchat.adapter.MessageAdapter
 import com.example.meshchat.databinding.ActivityMainBinding
 import com.example.meshchat.model.Message
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
-
-
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -38,17 +37,13 @@ class MainActivity : AppCompatActivity() {
         checkPermissions()
 
         binding.btnSend.setOnClickListener {
-            val message = binding.etMessage.text.toString()
-            if (message.isNotEmpty()) {
-                sendMessage(message)
-                messageAdapter.addMessage(Message("Me", message))
+            val messageText = binding.etMessage.text.toString()
+            if (messageText.isNotEmpty()) {
+                sendMessage(messageText)
+                messageAdapter.addMessage(Message("Me", messageText))
                 binding.etMessage.text.clear()
             }
         }
-    }
-
-    private fun Message(id: String, text: String): Message {
-        TODO("Not yet implemented")
     }
 
     private fun checkPermissions() {
@@ -61,10 +56,14 @@ class MainActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, permissions, 1)
     }
 
-    private fun hasBluetoothPermissions(): Boolean {
-        return ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    private fun hasPermission(permission: String): Boolean {
+        return ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasAllBluetoothPermissions(): Boolean {
+        return hasPermission(Manifest.permission.BLUETOOTH_CONNECT) &&
+                hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
+                hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     override fun onRequestPermissionsResult(
@@ -81,7 +80,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun connectToFirstDevice() {
-        if (!hasBluetoothPermissions()) {
+        if (!hasAllBluetoothPermissions()) {
             Toast.makeText(this, "Bluetooth permissions not granted", Toast.LENGTH_SHORT).show()
             return
         }
@@ -104,6 +103,11 @@ class MainActivity : AppCompatActivity() {
                         e.printStackTrace()
                         runOnUiThread {
                             Toast.makeText(this, "Connection failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: SecurityException) {
+                        e.printStackTrace()
+                        runOnUiThread {
+                            Toast.makeText(this, "Security error: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }.start()
