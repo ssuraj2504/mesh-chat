@@ -1,24 +1,25 @@
 package com.example.meshchat
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothSocket
+import android.bluetooth.*
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.meshchat.adapter.MessageAdapter
 import com.example.meshchat.databinding.ActivityMainBinding
 import com.example.meshchat.model.Message
+import com.example.meshchat.adapter.MessageAdapter
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
+import android.annotation.SuppressLint
 
 class MainActivity : AppCompatActivity() {
+
     private lateinit var binding: ActivityMainBinding
     private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
     private var connectedSocket: BluetoothSocket? = null
@@ -37,13 +38,23 @@ class MainActivity : AppCompatActivity() {
         checkPermissions()
 
         binding.btnSend.setOnClickListener {
-            val messageText = binding.etMessage.text.toString()
-            if (messageText.isNotEmpty()) {
-                sendMessage(messageText)
-                messageAdapter.addMessage(Message("Me", messageText))
+            val text = binding.etMessage.text.toString()
+            if (text.isNotEmpty()) {
+                sendMessage(text)
+                messageAdapter.addMessage(Message(sender = "Me", text = text, timestamp = System.currentTimeMillis()))
                 binding.etMessage.text.clear()
             }
         }
+
+        binding.btnHost.setOnClickListener {
+            startBluetoothServer()
+        }
+
+        binding.btnClient.setOnClickListener {
+            connectToFirstDevice()
+        }
+
+        makeDeviceDiscoverable()
     }
 
     private fun checkPermissions() {
@@ -56,67 +67,89 @@ class MainActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, permissions, 1)
     }
 
-    private fun hasPermission(permission: String): Boolean {
-        return ActivityCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+    private fun hasBluetoothPermissions(): Boolean {
+        return ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun hasAllBluetoothPermissions(): Boolean {
-        return hasPermission(Manifest.permission.BLUETOOTH_CONNECT) &&
-                hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
-                hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+    @SuppressLint("MissingPermission")
+    private fun makeDeviceDiscoverable() {
+        val intent = Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE)
+        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300)
+        startActivity(intent)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1 && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-            connectToFirstDevice()
-        } else {
-            Toast.makeText(this, "Permissions not granted", Toast.LENGTH_SHORT).show()
+    @SuppressLint("MissingPermission")
+    private fun startBluetoothServer() {
+        val serverSocket: BluetoothServerSocket? = try {
+            bluetoothAdapter?.listenUsingRfcommWithServiceRecord("MeshChat", uuid)
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
         }
+
+        Thread {
+            try {
+                val socket = serverSocket?.accept()
+                connectedSocket = socket
+                outputStream = socket?.outputStream
+
+                runOnUiThread {
+                    binding.tvStatus.text = "Client connected"
+                    Toast.makeText(this, "Client connected!", Toast.LENGTH_SHORT).show()
+                }
+
+                socket?.inputStream?.let { listenForMessages(it) }
+
+            } catch (e: IOException) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this, "Server accept failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
     }
 
     private fun connectToFirstDevice() {
-        if (!hasAllBluetoothPermissions()) {
+        if (!hasBluetoothPermissions()) {
             Toast.makeText(this, "Bluetooth permissions not granted", Toast.LENGTH_SHORT).show()
             return
         }
 
-        try {
-            val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
-            pairedDevices?.firstOrNull()?.let { device ->
-                Thread {
-                    try {
-                        val socket = device.createRfcommSocketToServiceRecord(uuid)
-                        socket.connect()
-                        connectedSocket = socket
-                        outputStream = socket.outputStream
+        val pairedDevices = bluetoothAdapter?.bondedDevices
+        pairedDevices?.firstOrNull()?.let { device ->
+            Thread {
+                try {
+                    val socket = device.createRfcommSocketToServiceRecord(uuid)
+                    bluetoothAdapter?.cancelDiscovery()
+
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                         runOnUiThread {
-                            Toast.makeText(this, "Connected to ${device.name}", Toast.LENGTH_SHORT).show()
-                            binding.tvStatus.text = "Connected to ${device.name}"
+                            Toast.makeText(this, "Missing BLUETOOTH_CONNECT permission", Toast.LENGTH_SHORT).show()
                         }
-                        listenForMessages(socket.inputStream)
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                        runOnUiThread {
-                            Toast.makeText(this, "Connection failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    } catch (e: SecurityException) {
-                        e.printStackTrace()
-                        runOnUiThread {
-                            Toast.makeText(this, "Security error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
+                        return@Thread
                     }
-                }.start()
-            } ?: run {
-                Toast.makeText(this, "No paired Bluetooth devices found", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: SecurityException) {
-            e.printStackTrace()
-            Toast.makeText(this, "Security exception: Missing permissions", Toast.LENGTH_SHORT).show()
+
+                    socket.connect()
+                    connectedSocket = socket
+                    outputStream = socket.outputStream
+
+                    runOnUiThread {
+                        binding.tvStatus.text = "Connected to ${device.name}"
+                        Toast.makeText(this, "Connected to ${device.name}", Toast.LENGTH_SHORT).show()
+                    }
+
+                    listenForMessages(socket.inputStream)
+
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                    runOnUiThread {
+                        Toast.makeText(this, "Connection failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }.start()
+        } ?: run {
+            Toast.makeText(this, "No paired Bluetooth devices found", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -132,12 +165,15 @@ class MainActivity : AppCompatActivity() {
     private fun listenForMessages(inputStream: InputStream) {
         val buffer = ByteArray(1024)
         var bytes: Int
+
         while (true) {
             try {
                 bytes = inputStream.read(buffer)
                 val message = String(buffer, 0, bytes)
                 runOnUiThread {
-                    messageAdapter.addMessage(Message("Peer", message))
+                    messageAdapter.addMessage(
+                        Message(sender = "Peer", text = message, timestamp = System.currentTimeMillis())
+                    )
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
