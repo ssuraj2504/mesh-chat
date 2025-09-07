@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.example.meshchat.app-mergeDebugResources-34:/layout/activity_main.xml",
+        "source": "com.example.meshchat.app-main-37:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.meshchat.app-mergeDebugResources-34:/layout/item_device.xml",
+        "source": "com.example.meshchat.app-main-37:/layout/item_device.xml"
+    },
+    {
+        "merged": "com.example.meshchat.app-mergeDebugResources-34:/layout/item_message.xml",
+        "source": "com.example.meshchat.app-main-37:/layout/item_message.xml"
+    }
+]

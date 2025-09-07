@@ -1,0 +1,26 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color white
+drawable bg_input
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+id btnClient
+id btnHost
+id btnSend
+id etMessage
+id recyclerView
+id tvDeviceName
+id tvMessage
+id tvSender
+id tvStatus
+layout activity_main
+layout item_device
+layout item_message
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+style Base.Theme.MeshChat
+style Theme.MeshChat
+xml backup_rules
+xml data_extraction_rules
