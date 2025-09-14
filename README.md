@@ -4,6 +4,12 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-blue)](https://kotlinlang.org)
 
 ---
+## 🎥 Demo Video
+
+👉 [Watch Prototype Demo](https://www.youtube.com/watch?v=HCWKwl2jh8Y)  
+*(Shows basic connection and messaging flow in current prototype)*
+
+---
 
 ## 🎯 Project Overview
 
@@ -37,13 +43,6 @@ The following features are actively being implemented:
 | Room Database | Local message storage |
 | Retrofit | Future network scalability |
 | Android Studio | IDE |
-
----
-
-## 🎥 Demo Video
-
-👉 [Watch Prototype Demo](https://www.youtube.com/watch?v=HCWKwl2jh8Y)  
-*(Shows basic connection and messaging flow in current prototype)*
 
 ---
 
